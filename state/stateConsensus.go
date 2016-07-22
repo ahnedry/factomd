@@ -310,14 +310,11 @@ func (s *State) FollowerExecuteSFault(m interfaces.IMsg) {
 	} else {
 		fedServerCnt = len(s.GetFedServers(sf.DBHeight))
 	}
-	fmt.Println("Faultcnt on", s.FactomNodeName, "(", s.LeaderVMIndex, "):", cnt)
 	if s.Leader && cnt > (fedServerCnt/2) {
 		responsibleFaulterIdx := (int(sf.VMIndex) + 1) % fedServerCnt
 
 		if s.LeaderVMIndex == responsibleFaulterIdx {
 			var listOfSigs []interfaces.IFullSignature
-			fmt.Println(s.FactomNodeName, "ISSUING FAULT ON", sf.ServerID.String()[:10])
-
 			for _, sig := range s.FaultMap[coreHash] {
 				listOfSigs = append(listOfSigs, sig)
 			}
@@ -350,10 +347,19 @@ func (s *State) FollowerExecuteFullFault(m interfaces.IMsg) {
 				relevantPL.FedServers[listIdx] = auditServerList[0]
 			}
 		}
-		s.AddFedServer(fsf.DBHeight, auditServerList[0].GetChainID())
+
+		addMsg := messages.NewAddServerByHashMsg(s, 0, auditServerList[0].GetChainID())
+		s.InMsgQueue() <- addMsg
+		s.NetworkOutMsgQueue() <- addMsg
+
 		s.RemoveAuditServer(fsf.DBHeight, auditServerList[0].GetChainID())
 	}
 	s.RemoveFedServer(fsf.DBHeight, fsf.ServerID)
+
+	removeMsg := messages.NewRemoveServerMsg(s, fsf.ServerID, 0)
+	s.InMsgQueue() <- removeMsg
+	s.NetworkOutMsgQueue() <- removeMsg
+
 	s.Leader, s.LeaderVMIndex = s.LeaderPL.GetVirtualServers(s.CurrentMinute, s.IdentityChainID)
 	delete(s.FaultMap, fsf.GetCoreHash().Fixed())
 }
@@ -444,25 +450,27 @@ func (s *State) ProcessAddServer(dbheight uint32, addServerMsg interfaces.IMsg) 
 		return true
 	}
 
-	if as.ServerType == 0 {
+	if as.ServerType == 0 { // Fed
 		audits := s.LeaderPL.AuditServers
 		for _, audit := range audits {
-			if audit.GetChainID().IsSameAs(as.ServerChainID) {
-				fmt.Printf("dddd %s %s\n", s.FactomNodeName, "Add Federated server message did not add to admin block, server is an audit server and cannot be both.")
-				return true
+			if audit.GetChainID().IsSameAs(as.ServerChainID) { // Promote
+				s.LeaderPL.RemoveAuditServerHash(as.ServerChainID)
+				//fmt.Printf("dddd %s %s\n", s.FactomNodeName, "Add Federated server message did not add to admin block, server is an audit server and cannot be both.")
+				//return true
 			}
 		}
-	} else if as.ServerType == 1 {
+	} else if as.ServerType == 1 { // Audit
 		feds := s.LeaderPL.FedServers
 		for _, fed := range feds {
 			if fed.GetChainID().IsSameAs(as.ServerChainID) {
-				fmt.Printf("dddd %s %s\n", s.FactomNodeName, "Add Audit server message did not add to admin block, server is a federated server and cannot be both.")
-				return true
+				s.LeaderPL.RemoveFedServerHash(as.ServerChainID)
+				//fmt.Printf("dddd %s %s\n", s.FactomNodeName, "Add Audit server message did not add to admin block, server is a federated server and cannot be both.")
+				//return true
 			}
 		}
 	}
 
-	if leader, _ := s.LeaderPL.GetFedServerIndexHash(as.ServerChainID); leader {
+	if leader, _ := s.LeaderPL.GetFedServerIndexHash(as.ServerChainID); leader && as.ServerType == 0 {
 		return true
 	}
 

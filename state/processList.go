@@ -427,7 +427,7 @@ func ask(p *ProcessList, vmIndex int, waitSeconds int64, vm *VM, thetime int64, 
 		thetime = now
 	}
 
-	if now-thetime >= waitSeconds {
+	if now-thetime >= waitSeconds+2 {
 		missingMsgRequest := messages.NewMissingMsg(p.State, vmIndex, p.DBHeight, uint32(height))
 		if missingMsgRequest != nil {
 			p.State.NetworkOutMsgQueue() <- missingMsgRequest
@@ -463,7 +463,6 @@ func fault(p *ProcessList, vmIndex int, waitSeconds int64, vm *VM, thetime int64
 
 // Process messages and update our state.
 func (p *ProcessList) Process(state *State) (progress bool) {
-
 	for i := 0; i < len(p.FedServers); i++ {
 		vm := p.VMs[i]
 
@@ -477,6 +476,8 @@ func (p *ProcessList) Process(state *State) (progress bool) {
 
 		if vm.Height == len(vm.List) && p.State.Syncing && !vm.Synced {
 			vm.missingTime = ask(p, i, 1, vm, vm.missingTime, vm.Height)
+		} else {
+			vm.missingTime = 0
 		}
 		vm.heartBeat = ask(p, i, 10, vm, vm.heartBeat, len(vm.List))
 
@@ -543,6 +544,9 @@ func (p *ProcessList) Process(state *State) (progress bool) {
 func (p *ProcessList) AddToProcessList(ack *messages.Ack, m interfaces.IMsg) {
 
 	toss := func(hint string) {
+		fmt.Println("dddd TOSS in Process List", p.State.FactomNodeName, hint)
+		fmt.Println("dddd TOSS in Process List", p.State.FactomNodeName, ack.String())
+		fmt.Println("dddd TOSS in Process List", p.State.FactomNodeName, m.String())
 		delete(p.State.Holding, ack.GetHash().Fixed())
 		delete(p.State.Acks, ack.GetHash().Fixed())
 	}
@@ -553,13 +557,15 @@ func (p *ProcessList) AddToProcessList(ack *messages.Ack, m interfaces.IMsg) {
 
 	now := p.State.GetTimestamp()
 
-	_, isNew2 := p.State.Replay.Valid(constants.INTERNAL_REPLAY, m.GetRepeatHash().Fixed(), m.GetTimestamp(), now)
-	if !isNew2 {
-		toss("seen before, or too old")
-		return
-	}
-
 	vm := p.VMs[ack.VMIndex]
+
+	if len(vm.List) > int(ack.Height) && vm.List[ack.Height] != nil {
+		_, isNew2 := p.State.Replay.Valid(constants.INTERNAL_REPLAY, m.GetRepeatHash().Fixed(), m.GetTimestamp(), now)
+		if !isNew2 {
+			toss("seen before, or too old")
+			return
+		}
+	}
 
 	if ack.DBHeight != p.DBHeight {
 		panic(fmt.Sprintf("Ack is wrong height.  Expected: %d Ack: %s", p.DBHeight, ack.String()))
