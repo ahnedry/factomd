@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/FactomProject/factomd/common/adminBlock"
 	"github.com/FactomProject/factomd/common/interfaces"
 	"github.com/FactomProject/factomd/common/messages"
 	"github.com/FactomProject/factomd/log"
@@ -203,9 +204,9 @@ func (list *DBStateList) Catchup() {
 }
 
 // a contains b, returns true
-func containsFedServer(haystack []interfaces.IFctServer, needle interfaces.IFctServer) bool {
+func containsServer(haystack []interfaces.IFctServer, needle interfaces.IFctServer) bool {
 	for _, hay := range haystack {
-		if needle.GetChainID().IsSameAs(hay) {
+		if needle.GetChainID().IsSameAs(hay.GetChainID()) {
 			return true
 		}
 	}
@@ -244,15 +245,43 @@ func (list *DBStateList) FixupLinks(p *DBState, d *DBState) (progress bool) {
 	// Fix deltas of servers
 	previousFeds := previousPL.FedServers
 	currentFeds := currentPL.FedServers
+	fmt.Println("CF:", currentFeds)
+	fmt.Println("PF:", previousFeds)
+
+	// Federated Servers
 	for _, cf := range currentFeds {
-		if !containsFedServer(previousFeds, cf) {
+		if !containsServer(previousFeds, cf) {
 			// Delete cf from current
+			removeEntry := adminBlock.NewAddFederatedServer(cf.GetChainID(), currentDBHeight)
+			d.AdminBlock.AddFirstABEntry(removeEntry)
 		}
 	}
 
 	for _, pf := range previousFeds {
-		if !containsFedServer(currentFeds, pf) {
+		if !containsServer(currentFeds, pf) {
 			// Add pf to current
+			addEntry := adminBlock.NewRemoveFederatedServer(pf.GetChainID(), currentDBHeight)
+			d.AdminBlock.AddFirstABEntry(addEntry)
+		}
+	}
+
+	previousAuds := previousPL.AuditServers
+	currentAuds := currentPL.AuditServers
+
+	// Audit Servers
+	for _, ca := range currentAuds {
+		if !containsServer(previousAuds, ca) {
+			// Delete cf from current
+			removeEntry := adminBlock.NewAddFederatedServer(ca.GetChainID(), currentDBHeight)
+			d.AdminBlock.AddFirstABEntry(removeEntry)
+		}
+	}
+
+	for _, pa := range previousAuds {
+		if !containsServer(currentAuds, pa) {
+			// Add pf to current
+			addEntry := adminBlock.NewRemoveFederatedServer(pa.GetChainID(), currentDBHeight)
+			d.AdminBlock.AddFirstABEntry(addEntry)
 		}
 	}
 
