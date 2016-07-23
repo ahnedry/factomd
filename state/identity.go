@@ -384,7 +384,7 @@ func checkIdentityForFull(identityIndex int, st *State) error {
 	//log.Printfln("DEBUG: IDC:%d, IDR:%d, dif:%d\n", id.IdentityCreated, id.ManagementRegistered, dif)
 	dif = id.ManagementCreated - id.ManagementRegistered
 	if id.ManagementRegistered > id.ManagementCreated {
-		dif = id.IdentityRegistered - id.IdentityCreated
+		dif = id.ManagementRegistered - id.ManagementCreated
 	}
 	if dif > TIME_WINDOW {
 		return errors.New("Time window of management create and register invalid")
