@@ -272,7 +272,7 @@ func (list *DBStateList) FixupLinks(p *DBState, d *DBState) (progress bool) {
 	for _, ca := range currentAuds {
 		if !containsServer(previousAuds, ca) {
 			// Delete cf from current
-			removeEntry := adminBlock.NewAddFederatedServer(ca.GetChainID(), currentDBHeight)
+			removeEntry := adminBlock.NewAddAuditServer(ca.GetChainID(), currentDBHeight)
 			d.AdminBlock.AddFirstABEntry(removeEntry)
 		}
 	}
