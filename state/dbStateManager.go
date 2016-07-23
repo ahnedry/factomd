@@ -245,9 +245,8 @@ func (list *DBStateList) FixupLinks(p *DBState, d *DBState) (progress bool) {
 	// Fix deltas of servers
 	previousFeds := previousPL.FedServers
 	currentFeds := currentPL.FedServers
-	fmt.Println("CF:", currentFeds)
-	fmt.Println("PF:", previousFeds)
 
+	var _ adminBlock.AdminBlock
 	// Federated Servers
 	for _, cf := range currentFeds {
 		if !containsServer(previousFeds, cf) {
