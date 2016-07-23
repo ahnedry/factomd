@@ -450,7 +450,7 @@ func (s *State) ProcessAddServer(dbheight uint32, addServerMsg interfaces.IMsg) 
 		return true
 	}
 
-	if as.ServerType == 0 { // Fed
+	/*if as.ServerType == 0 { // Fed
 		audits := s.LeaderPL.AuditServers
 		for _, audit := range audits {
 			if audit.GetChainID().IsSameAs(as.ServerChainID) { // Promote
@@ -468,7 +468,7 @@ func (s *State) ProcessAddServer(dbheight uint32, addServerMsg interfaces.IMsg) 
 				//return true
 			}
 		}
-	}
+	}*/
 
 	if leader, _ := s.LeaderPL.GetFedServerIndexHash(as.ServerChainID); leader && as.ServerType == 0 {
 		return true

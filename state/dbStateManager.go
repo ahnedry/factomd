@@ -202,12 +202,25 @@ func (list *DBStateList) Catchup() {
 
 }
 
-func (list *DBStateList) FixupLinks(p *DBState, d *DBState) (progress bool) {
+// a contains b, returns true
+func containsFedServer(haystack []interfaces.IFctServer, needle interfaces.IFctServer) bool {
+	for _, hay := range haystack {
+		if needle.GetChainID().IsSameAs(hay) {
+			return true
+		}
+	}
+	return false
+}
 
+// p is previous, d is current
+func (list *DBStateList) FixupLinks(p *DBState, d *DBState) (progress bool) {
 	// If this block is new, then make sure all hashes are fully computed.
 	if !d.isNew || p == nil {
 		return
 	}
+
+	currentDBHeight := d.DirectoryBlock.GetHeader().GetDBHeight()
+	previousDBHeight := p.DirectoryBlock.GetHeader().GetDBHeight()
 
 	d.DirectoryBlock.MarshalBinary()
 
@@ -222,7 +235,26 @@ func (list *DBStateList) FixupLinks(p *DBState, d *DBState) (progress bool) {
 		panic(err.Error())
 	}
 	d.EntryCreditBlock.GetHeader().SetPrevFullHash(hash)
-	d.EntryCreditBlock.GetHeader().SetDBHeight(d.DirectoryBlock.GetHeader().GetDBHeight())
+	d.EntryCreditBlock.GetHeader().SetDBHeight(currentDBHeight)
+
+	// Admin Block Fixup
+	previousPL := list.State.ProcessLists.Get(previousDBHeight)
+	currentPL := list.State.ProcessLists.Get(currentDBHeight)
+
+	// Fix deltas of servers
+	previousFeds := previousPL.FedServers
+	currentFeds := currentPL.FedServers
+	for _, cf := range currentFeds {
+		if !containsFedServer(previousFeds, cf) {
+			// Delete cf from current
+		}
+	}
+
+	for _, pf := range previousFeds {
+		if !containsFedServer(currentFeds, pf) {
+			// Add pf to current
+		}
+	}
 
 	hash, err = p.AdminBlock.BackReferenceHash()
 	if err != nil {
@@ -230,8 +262,8 @@ func (list *DBStateList) FixupLinks(p *DBState, d *DBState) (progress bool) {
 	}
 	d.AdminBlock.GetHeader().SetPrevBackRefHash(hash)
 
-	p.FactoidBlock.SetDBHeight(p.DirectoryBlock.GetHeader().GetDBHeight())
-	d.FactoidBlock.SetDBHeight(d.DirectoryBlock.GetHeader().GetDBHeight())
+	p.FactoidBlock.SetDBHeight(previousDBHeight)
+	d.FactoidBlock.SetDBHeight(currentDBHeight)
 	d.FactoidBlock.SetPrevKeyMR(p.FactoidBlock.GetKeyMR())
 	d.FactoidBlock.SetPrevLedgerKeyMR(p.FactoidBlock.GetLedgerMR())
 
@@ -243,7 +275,7 @@ func (list *DBStateList) FixupLinks(p *DBState, d *DBState) (progress bool) {
 	d.DirectoryBlock.SetECBlockHash(d.EntryCreditBlock)
 	d.DirectoryBlock.SetFBlockHash(d.FactoidBlock)
 
-	pl := list.State.ProcessLists.Get(d.DirectoryBlock.GetHeader().GetDBHeight())
+	pl := list.State.ProcessLists.Get(currentDBHeight)
 
 	//for _, eb := range pl.NewEBlocks {
 	//	eb.BuildHeader()
