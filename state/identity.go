@@ -506,6 +506,7 @@ func registerBlockSigningKey(extIDs [][]byte, subChainID interfaces.IHash, st *S
 					if err != nil {
 						return errors.New("New Block Signing key for identity [" + chainID.String()[:10] + "] Error: cannot sign msg")
 					}
+					st.NetworkOutMsgQueue() <- msg
 					msg.LeaderExecute(st)
 				}
 			}
@@ -568,6 +569,7 @@ func updateMatryoshkaHash(extIDs [][]byte, subChainID interfaces.IHash, st *Stat
 					if err != nil {
 						return errors.New("New Block Signing key for identity [" + chainID.String()[:10] + "] Error: cannot sign msg")
 					}
+					st.NetworkOutMsgQueue() <- msg
 					msg.LeaderExecute(st)
 				}
 			}
@@ -664,6 +666,7 @@ func registerAnchorSigningKey(extIDs [][]byte, subChainID interfaces.IHash, st *
 					if err != nil {
 						return errors.New("New Block Signing key for identity [" + chainID.String()[:10] + "] Error: cannot sign msg")
 					}
+					st.NetworkOutMsgQueue() <- msg
 					msg.LeaderExecute(st)
 				}
 			}

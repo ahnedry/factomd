@@ -239,16 +239,16 @@ func (list *DBStateList) FixupLinks(p *DBState, d *DBState) (progress bool) {
 	d.EntryCreditBlock.GetHeader().SetDBHeight(currentDBHeight)
 
 	// Admin Block Fixup
-	previousPL := list.State.ProcessLists.Get(previousDBHeight)
-	currentPL := list.State.ProcessLists.Get(currentDBHeight)
+	//previousPL := list.State.ProcessLists.Get(previousDBHeight)
+	//currentPL := list.State.ProcessLists.Get(currentDBHeight)
 
 	// Fix deltas of servers
-	previousFeds := previousPL.FedServers
-	currentFeds := currentPL.FedServers
+	//previousFeds := previousPL.FedServers
+	//currentFeds := currentPL.FedServers
 
 	var _ adminBlock.AdminBlock
 	// Federated Servers
-	for _, cf := range currentFeds {
+	/*for _, cf := range currentFeds {
 		if !containsServer(previousFeds, cf) {
 			// Delete cf from current
 			removeEntry := adminBlock.NewAddFederatedServer(cf.GetChainID(), currentDBHeight)
@@ -282,7 +282,7 @@ func (list *DBStateList) FixupLinks(p *DBState, d *DBState) (progress bool) {
 			addEntry := adminBlock.NewRemoveFederatedServer(pa.GetChainID(), currentDBHeight)
 			d.AdminBlock.AddFirstABEntry(addEntry)
 		}
-	}
+	}*/
 
 	hash, err = p.AdminBlock.BackReferenceHash()
 	if err != nil {
