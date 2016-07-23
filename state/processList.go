@@ -234,6 +234,10 @@ func (p *ProcessList) GetAuditServerIndexHash(identityChainID interfaces.IHash) 
 // but for now, we are just going to make it a function of the dbheight.
 func (p *ProcessList) MakeMap() {
 	n := len(p.FedServers)
+	if n == 0 {
+		log.Println("dddd This should not happen. 0 Federated Servers exist when MakeMap() was called.")
+		return
+	}
 	indx := int(p.DBHeight*131) % n
 
 	for i := 0; i < 10; i++ {
@@ -276,6 +280,11 @@ func (p *ProcessList) AddFedServer(identityChainID interfaces.IHash) int {
 	if found {
 		return i
 	}
+	// If an audit server, it gets promoted
+	auditFound, _ := p.GetAuditServerIndexHash(identityChainID)
+	if auditFound {
+		p.RemoveAuditServerHash(identityChainID)
+	}
 	p.FedServers = append(p.FedServers, nil)
 	copy(p.FedServers[i+1:], p.FedServers[i:])
 	p.FedServers[i] = &interfaces.Server{ChainID: identityChainID}
@@ -291,6 +300,11 @@ func (p *ProcessList) AddAuditServer(identityChainID interfaces.IHash) int {
 	found, i := p.GetAuditServerIndexHash(identityChainID)
 	if found {
 		return i
+	}
+	// If a fed server, demote
+	fedFound, _ := p.GetFedServerIndexHash(identityChainID)
+	if fedFound {
+		p.RemoveFedServerHash(identityChainID)
 	}
 	p.AuditServers = append(p.AuditServers, nil)
 	copy(p.AuditServers[i+1:], p.AuditServers[i:])
