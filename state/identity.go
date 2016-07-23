@@ -103,7 +103,7 @@ func (st *State) AddIdentityFromChainID(cid interfaces.IHash) error {
 	}
 	// FILO
 	for i := len(eblkStackRoot) - 1; i >= 0; i-- {
-		LoadIdentityByEntryBlock(eblkStackRoot[i], st, true)
+		LoadIdentityByEntryBlock(eblkStackRoot[i], st, false)
 	}
 
 	mr, err = st.DB.FetchHeadIndexByChainID(managementChain)
